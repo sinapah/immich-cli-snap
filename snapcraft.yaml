@@ -1,0 +1,43 @@
+name: immich-cli
+base: core24
+version: "3.2.0"
+summary: Command Line Interface for Immich
+description: |
+  Unofficial snap packaging of the Immich CLI (@immich/cli 3.2.0) for uploading
+  photos and videos to an Immich server.
+license: AGPL-3.0
+confinement: strict
+source-code: https://github.com/sinapah/immich-cli-snap.git
+
+apps:
+  immich:
+    command: bin/immich
+    plugs:
+      - network
+      - home
+
+parts:
+  node:
+    plugin: dump
+    source: https://nodejs.org/dist/v22.23.3/node-v22.23.3-linux-x64.tar.xz
+    source-type: tar
+
+  immich-cli:
+    plugin: nil
+    after:
+      - node
+    override-build: |
+      set -eux
+      export PATH="$CRAFT_STAGE/bin:$PATH"
+      node --version
+      npm --version
+      npm install --omit=dev --no-audit --no-fund \
+        --prefix "$CRAFT_PART_INSTALL/lib/immich-cli" \
+        @immich/cli@3.2.0
+
+      mkdir -p "$CRAFT_PART_INSTALL/bin"
+      cat > "$CRAFT_PART_INSTALL/bin/immich" <<'EOF'
+      #!/bin/sh
+      exec "$SNAP/bin/node" "$SNAP/lib/immich-cli/node_modules/@immich/cli/bin/immich" "$@"
+      EOF
+      chmod +x "$CRAFT_PART_INSTALL/bin/immich"
